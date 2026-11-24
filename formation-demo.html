@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阵型图演示（独立）</title>
+<style>
+  :root {
+    --pitch-green: #2e7d32;
+    --pitch-light: #3c8c40;
+    --pitch-dark: #256428;
+    --line: rgba(255,255,255,.82);
+    --home: #2979ff;
+    --home-dark: #1565c0;
+    --away: #ffffff;
+    --away-dark: #cfd8dc;
+    --card-bg: #fff;
+    --text: #1a1a1a;
+    --sub-text: #555;
+    --border: #e0e0e0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: var(--text);
+    padding: 16px;
+    min-height: 100vh;
+  }
+  header {
+    max-width: 1200px;
+    margin: 0 auto 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  header h1 { font-size: 18px; margin-bottom: 12px; }
+  .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; }
+  .mode-switch button {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #f5f6f8;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--sub-text);
+  }
+  .mode-switch button.active {
+    background: #2979ff;
+    color: #fff;
+    border-color: #2979ff;
+  }
+  .formation-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .formation-bar .team-label { font-weight: 700; font-size: 14px; }
+  .formation-bar .home-label { color: #1565c0; }
+  .formation-bar .away-label { color: #555; }
+  select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    background: #fff;
+  }
+  .hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--sub-text);
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  /* 工具栏：撤销/重做/导入导出 */
+  .action-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .tool-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: #37474f;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background .15s, border-color .15s;
+  }
+  .tool-btn:hover:not(:disabled) { background: #f5f7fa; border-color: #90a4ae; }
+  .tool-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .save-tip {
+    font-size: 12px;
+    color: #90a4ae;
+    margin-left: auto;
+  }
+  .save-tip.flash { color: #2e7d32; }
+  /* 名单搜索框 */
+  .squad-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    margin: 6px 0 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    outline: none;
+  }
+  .squad-search:focus { border-color: #2979ff; box-shadow: 0 0 0 2px rgba(41,121,255,.15); }
+  .no-result {
+    font-size: 12px;
+    color: #90a4ae;
+    padding: 8px 4px;
+    text-align: center;
+  }
+  /* 替补席条目：参考直播吧样式（号码头像 + 名字 + 换下信息） */
+  .sub-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 8px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background .12s;
+    position: relative;
+  }
+  .sub-item:hover { background: #f2f5f9; }
+  .sub-item.selected { background: #e3f2fd; box-shadow: inset 0 0 0 1px #90caf9; }
+  .sub-item.used { background: #f7fbf7; }
+  .sub-avatar {
+    width: 38px; height: 38px;
+    flex: 0 0 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.16);
+    position: relative;
+  }
+  .sub-item.home .sub-avatar { background: linear-gradient(145deg,#42a5f5,#1565c0); color:#fff; }
+  .sub-item.away .sub-avatar { background: linear-gradient(145deg,#eceff1,#b0bec5); color:#37474f; }
+  .sub-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .sub-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #263238;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sub-meta {
+    font-size: 11px;
+    color: #90a4ae;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sub-meta .out-name { color: #e65100; font-weight: 600; }
+  .sub-right {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  }
+  .sub-min {
+    font-size: 11px; font-weight: 800;
+    color: #2e7d32;
+    white-space: nowrap;
+  }
+  .sub-min.in { color: #2e7d32; }
+  .sub-min.out { color: #e53935; }
+  .sub-meta .in-name { color: #2e7d32; font-weight: 600; }
+  .sub-item.subbed-off { opacity: .72; }
+  .sub-item.subbed-off .sub-avatar { filter: grayscale(.7); }
+  .sub-item.subbed-off .sub-name { color: #78909c; }
+  /* 首发名单中已被换下的球员 */
+  .player-row.off-row {
+    opacity: .66;
+    background: #f7f8fa;
+    border: 1px dashed #cfd8dc;
+  }
+  .player-row.off-row .jn { filter: grayscale(1); }
+  .off-by { font-size: 11px; color: #90a4ae; }
+  .sub-in-btn {
+    border: none;
+    background: #2979ff;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .sub-in-btn:hover { background: #1565c0; }
+  .sub-in-btn:disabled { background: #cfd8dc; cursor: not-allowed; }
+  .sub-empty {
+    font-size: 12px;
+    color: #b0bec5;
+    text-align: center;
+    padding: 10px 0;
+  }
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 260px 1fr 260px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .squad-panel { order: 2; }
+    .pitch-wrap { order: 1; }
+  }
+  .squad-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    max-height: 78vh;
+    overflow-y: auto;
+  }
+  .squad-panel .panel-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .squad-panel .panel-title.home { color: var(--home-dark); }
+  .squad-panel .panel-title.away { color: #455a64; }
+  .squad-panel .sub-heading {
+    font-size: 11px;
+    color: var(--sub-text);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin: 10px 0 6px;
+  }
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  .player-row:hover { background: #f0f4ff; }
+  .player-row.selected { background: #e3edff; border-color: #2979ff; }
+  .player-row.on-pitch { background: #f5f6f8; border-color: #d0e3ff; }
+  .player-row .jn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: #eceff1;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .player-row.home .jn { background: var(--home); color: #fff; }
+  .player-row.away .jn { background: #eceff1; color: #263238; border: 1px solid #cfd8dc; }
+  .player-row .nm { flex: 1; font-size: 13px; }
+  .player-row .mini-badge { font-size: 11px; color: #fff; border-radius: 4px; padding: 1px 4px; }
+  .player-row .sub-in-btn {
+    font-size: 11px;
+    border: 1px solid #2979ff;
+    color: #2979ff;
+    background: #fff;
+    border-radius: 6px;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+  .player-row .sub-in-btn:hover { background: #2979ff; color: #fff; }
+
+  .pitch-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .pitch {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    aspect-ratio: 3 / 4.6;
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+      repeating-linear-gradient(0deg, var(--pitch-green) 0 34px, var(--pitch-light) 34px 68px);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
+    touch-action: manipulation;
+  }
+  /* 半场底色区分，避免主客队放混 */
+  .pitch::before, .pitch::after {
+    content: '';
+    position: absolute; left: 0; right: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .pitch::before { top: 0; bottom: 50%; background: rgba(41,121,255,.06); }   /* 主队半场淡蓝 */
+  .pitch::after { top: 50%; bottom: 0; background: rgba(255,255,255,.06); }    /* 客队半场淡白 */
+  .pitch svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .name-strip {
+    position: absolute; left: 0; right: 0;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    z-index: 2;
+    opacity: .9;
+  }
+  .name-strip.home { top: 0; color: #fff; background: var(--home-dark); }
+  .name-strip.away { bottom: 0; color: #263238; background: #eceff1; }
+
+  .player-marker {
+    position: absolute;
+    transform: translate(-50%, -38%);
+    z-index: 3;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+  }
+  .player-marker .num {
+    width: 36px; height: 36px;
+    margin: 0 auto;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    transition: transform .1s;
+    position: relative;
+  }
+  .player-marker:hover .num { transform: scale(1.12); }
+  .player-marker.home .num { background: var(--home); color: #fff; border: 2px solid #fff; }
+  .player-marker.away .num { background: var(--away); color: #263238; border: 2px solid #90a4ae; }
+  .player-marker.pickable .num::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px dashed #ffeb3b;
+    border-radius: 50%;
+    opacity: .9;
+  }
+  /* 球员名字 */
+  .player-marker .pname {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  /* 事件角标容器：定位在号码圆圈右上角 */
+  .player-marker .badges {
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    z-index: 4;
+  }
+  /* 进球标记：红圈+⚽ */
+  .badge-goal {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.5);
+    border: 1.5px solid #fff;
+  }
+  .badge-goal::before { content: '⚽'; font-size: 10px; }
+  /* 助攻标记：绿圈+A */
+  .badge-assist {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #43a047;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.5);
+    border: 1.5px solid #fff;
+  }
+  .badge-assist::before { content: 'A'; }
+  /* 黄牌 */
+  .badge-yellow {
+    width: 10px; height: 14px;
+    background: #fbc02d;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.4);
+    border: 1px solid #fff;
+  }
+  /* 红牌 */
+  .badge-red {
+    width: 10px; height: 14px;
+    background: #e53935;
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.4);
+    border: 1px solid #fff;
+  }
+  /* 换人标记：箭头 + 分钟，显示在名字下方 */
+  .player-marker .sub-tag {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 52px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    z-index: 4;
+  }
+  .sub-tag.out { color: #fff; background: #e53935; text-shadow: none; }
+  .sub-tag.in { color: #fff; background: #43a047; text-shadow: none; }
+  .sub-tag .arrow { font-size: 12px; }
+
+  .empty-slot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255,255,255,.7);
+    z-index: 2;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.85);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .empty-slot.blocked {
+    border-color: rgba(255,100,100,.5);
+    cursor: not-allowed;
+    opacity: .3;
+  }
+
+  .pitch-legend {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--sub-text);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .pitch-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .dot.goal { background: #26c6da; }
+  .dot.assist { background: #43a047; }
+  .dot.yellow { background: #fbc02d; }
+  .dot.red { background: #e53935; }
+  .dot.sub { background: #ffb74d; }
+
+  /* 弹层 */
+  .modal-mask {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-mask.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.25);
+  }
+  .modal h3 { font-size: 15px; margin-bottom: 12px; }
+  .modal .pname { color: #2979ff; }
+  .stat-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row .label { font-size: 14px; }
+  .stat-row .ctl { display: flex; align-items: center; gap: 8px; }
+  .stat-row .ctl button {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #f5f6f8;
+    cursor: pointer; font-size: 15px; font-weight: 700;
+  }
+  .stat-row .ctl .val { min-width: 24px; text-align: center; font-weight: 700; }
+  .modal .close-btn {
+    margin-top: 14px;
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    border: none;
+    background: #2979ff; color: #fff;
+    cursor: pointer; font-size: 14px;
+  }
+  .sub-form label { display: block; font-size: 13px; margin-bottom: 6px; }
+  .sub-form input {
+    width: 100%; padding: 8px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 14px; margin-bottom: 12px;
+  }
+  .sub-form .btns { display: flex; gap: 8px; }
+  .sub-form .btns button { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .sub-form .confirm { background: #2979ff; color: #fff; border: none; }
+  .sub-form .cancel { background: #f5f6f8; border: 1px solid var(--border); color: var(--sub-text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>阵型图演示 <small style="font-weight:400;color:#888;">（独立原型 · 未接入应用）</small></h1>
+  <div class="mode-switch">
+    <button data-mode="lineup" class="active">赛前排兵</button>
+    <button data-mode="stats">赛后标注</button>
+  </div>
+  <div class="formation-bar">
+    <span class="team-label home-label">主队</span>
+    <select id="homeFormation"></select>
+    <span class="team-label away-label">客队</span>
+    <select id="awayFormation"></select>
+    <button id="autoFillBtn" style="margin-left:auto;padding:6px 14px;border-radius:8px;border:1px solid #2979ff;background:#2979ff;color:#fff;cursor:pointer;font-size:13px;">一键排入</button>
+    <button id="clearBtn" style="padding:6px 14px;border-radius:8px;border:1px solid #e53935;background:#fff;color:#e53935;cursor:pointer;font-size:13px;">清空阵容</button>
+  </div>
+  <div class="action-bar">
+    <button id="undoBtn" class="tool-btn" disabled title="撤销 (Ctrl+Z)">↶ 撤销</button>
+    <button id="redoBtn" class="tool-btn" disabled title="重做 (Ctrl+Y)">↷ 重做</button>
+    <button id="exportBtn" class="tool-btn">↓ 导出 JSON</button>
+    <button id="importBtn" class="tool-btn">↑ 导入 JSON</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    <span class="save-tip" id="saveTip">改动会自动保存到本地</span>
+  </div>
+  <div class="hint" id="hint"></div>
+</header>
+
+<main>
+  <aside class="squad-panel" id="homeSquad"></aside>
+  <section class="pitch-wrap">
+    <div class="pitch" id="pitch"></div>
+    <div class="pitch-legend">
+      <span><i class="dot goal"></i>进球</span>
+      <span><i class="dot assist"></i>助攻</span>
+      <span><i class="dot yellow"></i>黄牌</span>
+      <span><i class="dot red"></i>红牌</span>
+      <span><i class="dot sub"></i>换人</span>
+    </div>
+  </section>
+  <aside class="squad-panel" id="awaySquad"></aside>
+</main>
+
+<div class="modal-mask" id="mask">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 常量 ---------- */
+  var FORMATIONS = ['4-4-2','4-3-3','3-5-2','4-2-3-1','3-4-3','5-4-1','4-5-1','4-1-4-1','3-4-1-2','5-3-2'];
+
+  /* ---------- 假名单数据 ---------- */
+  function roster(prefix, nums) {
+    return nums.map(function (n) {
+      return { id: prefix + '-' + n, jn: n, name: prefix + '球员' + n };
+    });
+  }
+  var HOME_PLAYERS = roster('主队', [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
+  var AWAY_PLAYERS = roster('客队', [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
+
+  /* ---------- 状态 ---------- */
+  var state = {
+    mode: 'lineup',          // lineup | stats
+    selectedPlayer: null,    // { team, playerId }
+    pendingSub: null,        // { team, playerId } 待换上的替补
+    search: { home: '', away: '' },
+    teams: {
+      home: { formation: '4-3-3', slots: [], subs: [] },
+      away: { formation: '4-4-2', slots: [], subs: [] }
+    }
+  };
+
+  /* ---------- 持久化与历史 ---------- */
+  var STORAGE_KEY = 'sztufa-formation-demo-v1';
+  var MAX_HISTORY = 60;
+  var historyStack = { undo: [], redo: [] };
+
+  // 只序列化必要字段：坐标可由阵型重建，不存
+  function snapshotState() {
+    return JSON.stringify({
+      mode: state.mode,
+      home: {
+        formation: state.teams.home.formation,
+        slots: state.teams.home.slots.map(function (s) {
+          return { playerId: s.playerId, goals: s.goals, assists: s.assists,
+                   yellow: s.yellow, red: s.red, subIn: s.subIn, subOut: s.subOut,
+                   outs: (s.outs || []).map(function (o) { return Object.assign({}, o); }) };
+        }),
+        subs: state.teams.home.subs
+      },
+      away: {
+        formation: state.teams.away.formation,
+        slots: state.teams.away.slots.map(function (s) {
+          return { playerId: s.playerId, goals: s.goals, assists: s.assists,
+                   yellow: s.yellow, red: s.red, subIn: s.subIn, subOut: s.subOut,
+                   outs: (s.outs || []).map(function (o) { return Object.assign({}, o); }) };
+        }),
+        subs: state.teams.away.subs
+      }
+    });
+  }
+
+  function restoreState(json) {
+    var d = JSON.parse(json);
+    state.mode = d.mode === 'stats' ? 'stats' : 'lineup';
+    ['home', 'away'].forEach(function (team) {
+      var src = d[team] || {};
+      var t = state.teams[team];
+      var formation = FORMATIONS.indexOf(src.formation) >= 0 ? src.formation : t.formation;
+      t.formation = formation;
+      // 用阵型重建坐标，再按索引回填球员与统计
+      t.slots = buildSlots(formation, teamSide(team)).map(function (s) {
+        return { line: s.line, idx: s.idx, x: s.x, y: s.y, playerId: null,
+                 goals: 0, assists: 0, yellow: 0, red: 0, subIn: null, subOut: null, outs: [] };
+      });
+      (src.slots || []).forEach(function (os, i) {
+        var target = t.slots[i];
+        if (!target) return;
+        target.playerId = os.playerId || null;
+        target.goals = os.goals || 0;
+        target.assists = os.assists || 0;
+        target.yellow = os.yellow || 0;
+        target.red = os.red || 0;
+        target.subIn = (os.subIn == null ? null : os.subIn);
+        target.subOut = (os.subOut == null ? null : os.subOut);
+        target.outs = (os.outs || []).map(function (o) {
+          return {
+            playerId: o.playerId, at: o.at, byName: o.byName,
+            goals: o.goals || 0, assists: o.assists || 0,
+            yellow: o.yellow || 0, red: o.red || 0
+          };
+        });
+      });
+      t.subs = (src.subs || []).map(function (s) {
+        return {
+          playerId: s.playerId,
+          subAt: s.subAt,
+          replacedName: s.replacedName,
+          outAt: s.outAt,
+          replacedByName: s.replacedByName
+        };
+      });
+    });
+    state.selectedPlayer = null;
+    state.pendingSub = null;
+    syncModeButtons();
+    render();
+  }
+
+  function saveLocal() {
+    try { localStorage.setItem(STORAGE_KEY, snapshotState()); } catch (e) { /* 隐私模式忽略 */ }
+    var tip = document.getElementById('saveTip');
+    if (tip) {
+      tip.textContent = '已保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      tip.classList.add('flash');
+      setTimeout(function () { tip.classList.remove('flash'); }, 800);
+    }
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      restoreState(raw);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function pushHistory() {
+    historyStack.undo.push(snapshotState());
+    if (historyStack.undo.length > MAX_HISTORY) historyStack.undo.shift();
+    historyStack.redo.length = 0;
+    updateHistoryButtons();
+  }
+
+  function undo() {
+    if (!historyStack.undo.length) return;
+    historyStack.redo.push(snapshotState());
+    restoreState(historyStack.undo.pop());
+    saveLocal();
+  }
+
+  function redo() {
+    if (!historyStack.redo.length) return;
+    historyStack.undo.push(snapshotState());
+    restoreState(historyStack.redo.pop());
+    saveLocal();
+  }
+
+  function updateHistoryButtons() {
+    var u = document.getElementById('undoBtn');
+    var r = document.getElementById('redoBtn');
+    if (u) u.disabled = historyStack.undo.length === 0;
+    if (r) r.disabled = historyStack.redo.length === 0;
+  }
+
+  function syncModeButtons() {
+    document.querySelectorAll('.mode-switch button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-mode') === state.mode);
+    });
+  }
+
+  /* ---------- 纯函数：阵型 -> 线人数 ---------- */
+  function formationLines(formation) {
+    return String(formation).split('-').map(Number).filter(function (n) { return n > 0; });
+  }
+
+  /* ---------- 纯函数：生成槽位坐标 ---------- */
+  function buildSlots(formation, side) {
+    var lines = formationLines(formation);   // 不含门将
+    var slots = [];
+    // 门将
+    slots.push({ line: -1, idx: 0 });
+    // 各条线
+    for (var li = 0; li < lines.length; li++) {
+      var count = lines[li];
+      for (var i = 0; i < count; i++) {
+        slots.push({ line: li, idx: i });
+      }
+    }
+    // 计算 x/y（归一化 0~1）
+    // 主队严格在上半场 (y < 0.5)，客队严格在下半场 (y > 0.5)，互不穿插
+    slots.forEach(function (s) {
+      var total = lines.length;
+      var denom = Math.max(1, total - 1);
+      if (s.line === -1) {
+        s.x = 0.5;
+        s.y = (side === 'home') ? 0.06 : 0.94;
+        return;
+      }
+      var lineY;
+      if (side === 'home') {
+        // 主队：门将 0.06，各线从 0.16 起向中线方向排，最远不超过 0.46
+        lineY = 0.16 + (s.line / denom) * 0.30;   // 0.16 ~ 0.46
+      } else {
+        // 客队：门将 0.94，各线从 0.84 起向中线方向排，最近不低于 0.54
+        lineY = 0.84 - (s.line / denom) * 0.30;   // 0.84 ~ 0.54
+      }
+      var count = lines[s.line];
+      s.x = (s.idx + 1) / (count + 1);
+      s.y = lineY;
+    });
+    return slots;
+  }
+
+  function teamSide(team) { return team === 'home' ? 'home' : 'away'; }
+
+  function initTeam(team) {
+    var t = state.teams[team];
+    var players = team === 'home' ? HOME_PLAYERS : AWAY_PLAYERS;
+    t.slots = buildSlots(t.formation, teamSide(team)).map(function (s) {
+      return { line: s.line, idx: s.idx, x: s.x, y: s.y, playerId: null,
+               goals: 0, assists: 0, yellow: 0, red: 0, subIn: null, subOut: null };
+    });
+    // 赛前清空：所有球员先进入候选名单，由用户手动摆放
+    t.subs = players.map(function (p) { return { playerId: p.id }; });
+  }
+
+  function allPlayers(team) { return team === 'home' ? HOME_PLAYERS : AWAY_PLAYERS; }
+  function findPlayer(team, id) {
+    var arr = allPlayers(team);
+    for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i];
+    return null;
+  }
+
+  /* ---------- 渲染：名单面板 ---------- */
+  function matchSearch(p, q) {
+    if (!q) return true;
+    var key = q.trim().toLowerCase();
+    if (!key) return true;
+    return String(p.jn).indexOf(key) >= 0 || p.name.toLowerCase().indexOf(key) >= 0;
+  }
+
+  function renderSquad(team) {
+    var el = document.getElementById(team === 'home' ? 'homeSquad' : 'awaySquad');
+    var t = state.teams[team];
+    var players = allPlayers(team);
+    var cls = team === 'home' ? 'home' : 'away';
+    var q = state.search[team] || '';
+    var onPitchIds = {};
+    t.slots.forEach(function (s) { if (s.playerId) onPitchIds[s.playerId] = true; });
+
+    var html = '';
+    html += '<div class="panel-title ' + cls + '">' + (team === 'home' ? '主队' : '客队') + '</div>';
+    html += '<input class="squad-search" type="text" id="' + team + 'Search" data-team="' + team + '" ' +
+            'placeholder="搜索号码或姓名" value="' + q.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">';
+    html += '<div class="sub-heading">首发 ' + t.slots.length + ' 人 · ' + t.formation + '</div>';
+
+    var shownOnPitch = 0;
+    // 按槽位顺序渲染：当前在场球员 + 该位置被换下的球员（↓）
+    t.slots.forEach(function (slot, slotIdx) {
+      if (!slot.playerId) return;
+      var p = findPlayer(team, slot.playerId);
+      if (p && matchSearch(p, q)) {
+        shownOnPitch++;
+        var badges = '';
+        if (slot.goals) badges += '<span class="mini-badge" style="background:#26c6da">球' + slot.goals + '</span>';
+        if (slot.assists) badges += '<span class="mini-badge" style="background:#43a047">助' + slot.assists + '</span>';
+        if (slot.red) badges += '<span class="mini-badge" style="background:#e53935">红</span>';
+        if (slot.yellow) badges += '<span class="mini-badge" style="background:#fbc02d;color:#4e342e">黄' + slot.yellow + '</span>';
+        var inTag = slot.subIn != null ? '<span class="sub-min in">↑' + slot.subIn + "'</span> " : '';
+        html += '<div class="player-row ' + cls + ' on-pitch" data-team="' + team + '" data-player="' + p.id + '" data-action="pick-slot">' +
+                '<span class="jn">' + p.jn + '</span><span class="nm">' + inTag + p.name + '</span>' + badges + '</div>';
+      }
+      // 被换下球员：灰色一行，保留其进球/助攻/红黄牌标注，可点击补录
+      (slot.outs || []).forEach(function (o, oi) {
+        var op = findPlayer(team, o.playerId);
+        if (!op || !matchSearch(op, q)) return;
+        var ob = '';
+        if (o.goals) ob += '<span class="mini-badge" style="background:#26c6da">球' + o.goals + '</span>';
+        if (o.assists) ob += '<span class="mini-badge" style="background:#43a047">助' + o.assists + '</span>';
+        if (o.red) ob += '<span class="mini-badge" style="background:#e53935">红</span>';
+        if (o.yellow) ob += '<span class="mini-badge" style="background:#fbc02d;color:#4e342e">黄' + o.yellow + '</span>';
+        var offAction = state.mode === 'stats'
+          ? ' data-action="stat-out" data-team="' + team + '" data-slot="' + slotIdx + '" data-out="' + oi + '"'
+          : '';
+        html += '<div class="player-row off-row ' + cls + '"' + offAction + '>' +
+                '<span class="jn">' + op.jn + '</span>' +
+                '<span class="nm">' + op.name +
+                  ' <span class="sub-min out">↓' + o.at + "'</span>" +
+                  (o.byName ? ' <span class="off-by">被 ' + o.byName + '</span>' : '') +
+                '</span>' + ob + '</div>';
+      });
+    });
+    if (q && shownOnPitch === 0) {
+      html += '<div class="no-result">首发中无匹配球员</div>';
+    }
+
+    html += '<div class="sub-heading">' + (state.mode === 'lineup' ? '候选名单' : '替补席') + '</div>';
+    var shownSubs = 0;
+    t.subs.forEach(function (s) {
+      var p = findPlayer(team, s.playerId);
+      if (!p || !matchSearch(p, q)) return;
+      shownSubs++;
+      var used = s.subAt != null;
+      var off = s.outAt != null;
+      var isSel = state.selectedPlayer && state.selectedPlayer.team === team && state.selectedPlayer.playerId === p.id;
+      var rowAction = state.mode === 'lineup' ? ' data-action="pick-slot"' : '';
+
+      // 副标题：下场 / 上场 / 未上场
+      var meta;
+      if (off && s.replacedByName) {
+        meta = '被 <span class="in-name">' + s.replacedByName + '</span> 换下';
+      } else if (used && s.replacedName) {
+        meta = '换下 <span class="out-name">' + s.replacedName + '</span>';
+      } else if (state.mode === 'stats') {
+        meta = '未上场 · ' + p.jn + ' 号';
+      } else {
+        meta = p.jn + ' 号';
+      }
+
+      var minutes = '';
+      if (used) minutes += '<span class="sub-min in">↑' + s.subAt + "'</span>";
+      if (off) minutes += '<span class="sub-min out">↓' + s.outAt + "'</span>";
+
+      html += '<div class="sub-item ' + cls + (isSel ? ' selected' : '') +
+              (used ? ' used' : '') + (off ? ' subbed-off' : '') + '"' + rowAction +
+              ' data-team="' + team + '" data-player="' + p.id + '">' +
+              '<div class="sub-avatar">' + p.jn + '</div>' +
+              '<div class="sub-info">' +
+                '<span class="sub-name">' + p.name + '</span>' +
+                '<span class="sub-meta">' + meta + '</span>' +
+              '</div>' +
+              '<div class="sub-right">' +
+                minutes +
+                (state.mode === 'stats'
+                  ? '<button class="sub-in-btn" ' + (used || off ? 'disabled' : '') +
+                    ' data-team="' + team + '" data-player="' + p.id + '" data-action="sub-in">' +
+                    (off ? '已下场' : used ? '已上场' : '换上') + '</button>'
+                  : '') +
+              '</div>' +
+            '</div>';
+    });
+    if (q && shownSubs === 0) {
+      html += '<div class="no-result">候选名单中无匹配球员</div>';
+    }
+    if (!t.subs.length) {
+      html += '<div class="sub-empty">暂无替补球员</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  /* ---------- 渲染：球场 ---------- */
+  function renderPitch() {
+    var el = document.getElementById('pitch');
+    var html = '';
+
+    html += '<svg viewBox="0 0 300 460" preserveAspectRatio="none">' +
+      '<rect x="10" y="10" width="280" height="440" rx="8" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<line x1="10" y1="230" x2="290" y2="230" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<circle cx="150" cy="230" r="34" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<circle cx="150" cy="230" r="2.5" fill="var(--line)"/>' +
+      // 顶部大禁区
+      '<rect x="60" y="10" width="180" height="52" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      // 顶部小禁区
+      '<rect x="105" y="10" width="90" height="22" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<circle cx="150" cy="44" r="2.5" fill="var(--line)"/>' +
+      // 底部大禁区
+      '<rect x="60" y="398" width="180" height="52" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<rect x="105" y="428" width="90" height="22" fill="none" stroke="var(--line)" stroke-width="2.5"/>' +
+      '<circle cx="150" cy="416" r="2.5" fill="var(--line)"/>' +
+      '</svg>';
+
+    html += '<div class="name-strip home">主队 · ' + state.teams.home.formation + '</div>';
+    html += '<div class="name-strip away">客队 · ' + state.teams.away.formation + '</div>';
+
+    ['home', 'away'].forEach(function (team) {
+      var t = state.teams[team];
+      t.slots.forEach(function (s, i) {
+        var x = (s.x * 100).toFixed(2);
+        var y = (s.y * 100).toFixed(2);
+        var p = s.playerId ? findPlayer(team, s.playerId) : null;
+
+        if (!p) {
+          var hasSel = state.mode === 'lineup' && state.selectedPlayer;
+          var pickable = hasSel && state.selectedPlayer.team === team;
+          var blocked = hasSel && state.selectedPlayer.team !== team;
+          var slotCls = pickable ? ' pickable' : (blocked ? ' blocked' : '');
+          html += '<div class="empty-slot' + slotCls + '" ' +
+                  'style="left:' + x + '%;top:' + y + '%;" ' +
+                  'data-team="' + team + '" data-slot="' + i + '" data-action="place"></div>';
+          return;
+        }
+
+        var cls = team === 'home' ? 'home' : 'away';
+        var badges = '';
+        if (s.goals) badges += '<span class="badge badge-goal" title="进球 ' + s.goals + '">' + (s.goals > 1 ? s.goals : '') + '</span>';
+        if (s.assists) badges += '<span class="badge badge-assist" title="助攻 ' + s.assists + '">' + (s.assists > 1 ? s.assists : '') + '</span>';
+        if (s.yellow) badges += '<span class="badge badge-yellow" title="黄牌 ' + s.yellow + '"></span>';
+        if (s.red) badges += '<span class="badge badge-red" title="红牌"></span>';
+        var subTag = '';
+        if (s.subOut != null) subTag = '<span class="sub-tag out"><span class="arrow">↓</span>' + s.subOut + "'</span>";
+        else if (s.subIn != null) subTag = '<span class="sub-tag in"><span class="arrow">↑</span>' + s.subIn + "'</span>";
+
+        html += '<div class="player-marker ' + cls + '" style="left:' + x + '%;top:' + y + '%;" ' +
+                'data-team="' + team + '" data-slot="' + i + '" data-player="' + p.id + '" data-action="click-player">' +
+                '<div class="num">' + p.jn +
+                (badges ? '<div class="badges">' + badges + '</div>' : '') +
+                '</div>' +
+                '<div class="pname">' + p.name.replace(/^(主队|客队)球员/, '') + '</div>' +
+                subTag + '</div>';
+      });
+    });
+
+    el.innerHTML = html;
+  }
+
+  /* ---------- 提示 ---------- */
+  function hint(type, msg) {
+    var el = document.getElementById('hint');
+    el.style.borderColor = type === 'warn' ? '#ff9800' : '#ffe082';
+    el.style.background = type === 'warn' ? '#fff3e0' : '#fff8e1';
+    if (msg) { el.textContent = msg; return; }
+    el.style.borderColor = '#ffe082';
+    el.style.background = '#fff8e1';
+    if (state.mode === 'lineup') {
+      if (state.selectedPlayer) {
+        var p = findPlayer(state.selectedPlayer.team, state.selectedPlayer.playerId);
+        var t = state.teams[state.selectedPlayer.team];
+        var filled = t.slots.filter(function (s) { return s.playerId; }).length;
+        el.textContent = '已选中 ' + p.name + '（' + p.jn + '号 · ' + (state.selectedPlayer.team === 'home' ? '主队' : '客队') + '），点击同侧高亮空位摆放。已排 ' + filled + '/' + t.slots.length + ' 人。点击场上球员可移回候选名单。';
+        return;
+      }
+      el.textContent = '赛前模式：在两侧名单点击球员 → 再点同侧高亮空位摆放。点击已上场球员可移回候选名单。';
+      return;
+    }
+    el.textContent = '赛后模式：点击场上球员标注进球/助攻/红黄牌；替补席点「换上」再点场上球员完成换人（记录分钟）。';
+  }
+
+  function render() {
+    initSeasons();
+    renderSquad('home');
+    renderSquad('away');
+    renderPitch();
+    hint();
+    updateHistoryButtons();
+    saveLocal();
+  }
+
+  function initSeasons() {
+    ['home', 'away'].forEach(function (team) {
+      var sel = document.getElementById(team + 'Formation');
+      sel.innerHTML = FORMATIONS.map(function (f) {
+        return '<option value="' + f + '"' + (state.teams[team].formation === f ? ' selected' : '') + '>' + f + '</option>';
+      }).join('');
+    });
+  }
+
+  /* ---------- 交互 ---------- */
+  function handleClicks(e) {
+    var t = e.target.closest('[data-action]');
+    if (!t) return;
+    var action = t.getAttribute('data-action');
+    var team = t.getAttribute('data-team');
+    var slotIdx = t.getAttribute('data-slot') != null ? parseInt(t.getAttribute('data-slot'), 10) : null;
+    var playerId = t.getAttribute('data-player');
+
+    if (action === 'pick-slot') {
+      onPickRow(team, playerId);
+    } else if (action === 'place') {
+      onPlace(team, slotIdx);
+    } else if (action === 'click-player' && state.mode === 'lineup') {
+      // 赛前模式：若已选中球员，点击场上球员 = 替换该槽位；否则 = 移除该球员
+      if (state.selectedPlayer) {
+        onPlace(team, slotIdx);
+      } else {
+        onPickRow(team, playerId);
+      }
+    } else if (action === 'click-player' && state.mode === 'stats') {
+      // 打开标注弹窗前记录一次历史（弹窗内多次加减合并为一步撤销）
+      if (!state.pendingSub) pushHistory();
+      openStatModal(team, slotIdx);
+    } else if (action === 'sub-in') {
+      onSubIn(team, playerId);
+    } else if (action === 'stat-out') {
+      var outIdx = parseInt(t.getAttribute('data-out'), 10);
+      if (!state.pendingSub) pushHistory();
+      openStatModal(team, slotIdx, outIdx);
+    }
+  }
+
+  function onPickRow(team, playerId) {
+    if (state.mode !== 'lineup') return;
+    // 如果已选中同一名球员，取消选中
+    if (state.selectedPlayer &&
+        state.selectedPlayer.team === team &&
+        state.selectedPlayer.playerId === playerId) {
+      state.selectedPlayer = null;
+      render();
+      return;
+    }
+    // 如果该球员已在场上，且当前没有从候选名单选中其他人 → 从场上移除回候选名单
+    var t = state.teams[team];
+    var onPitch = t.slots.some(function (s) { return s.playerId === playerId; });
+    if (onPitch && !state.selectedPlayer) {
+      pushHistory();
+      t.slots.forEach(function (s) { if (s.playerId === playerId) s.playerId = null; });
+      var exists = t.subs.some(function (s) { return s.playerId === playerId; });
+      if (!exists) t.subs.push({ playerId: playerId });
+      render();
+      return;
+    }
+    // 正常选中
+    state.selectedPlayer = { team: team, playerId: playerId };
+    render();
+  }
+
+  function onPlace(team, slotIdx) {
+    if (state.mode !== 'lineup') return;
+    if (!state.selectedPlayer) return;
+    // 队伍不匹配：不清空选中，给提示
+    if (state.selectedPlayer.team !== team) {
+      hint('warn', '选中的是' + (state.selectedPlayer.team === 'home' ? '主队' : '客队') + '球员，请点击同侧的空位！');
+      return;
+    }
+    var playerId = state.selectedPlayer.playerId;
+    var t = state.teams[team];
+    var slot = t.slots[slotIdx];
+    if (!slot) return;
+    pushHistory();
+    // 如果目标槽位已有球员，先将其放回候选名单
+    if (slot.playerId && slot.playerId !== playerId) {
+      var exists = t.subs.some(function (s) { return s.playerId === slot.playerId; });
+      if (!exists) t.subs.push({ playerId: slot.playerId });
+    }
+    // 把该球员从原槽位移除（如果之前已放在场上）
+    t.slots.forEach(function (s) { if (s.playerId === playerId) s.playerId = null; });
+    // 从候选名单移除该球员
+    t.subs = t.subs.filter(function (s) { return s.playerId !== playerId; });
+    // 放入新槽位
+    slot.playerId = playerId;
+    state.selectedPlayer = null;
+    render();
+  }
+
+  function onSubIn(team, playerId) {
+    if (state.mode !== 'stats') return;
+    // 已上场的替补不可重复换上
+    var alreadyOn = state.teams[team].slots.some(function (s) { return s.playerId === playerId; });
+    if (alreadyOn) return;
+    state.pendingSub = { team: team, playerId: playerId };
+    render();
+    hint();
+    var sub = findPlayer(team, playerId);
+    var el = document.getElementById('hint');
+    el.textContent = '请点击场上要被换下的球员（' + sub.name + ' ' + sub.jn + '号 将换上）';
+  }
+
+  /* ---------- 赛后统计弹层 ---------- */
+  function openStatModal(team, slotIdx, outIdx) {
+    // 若有待换上的替补，点击场上球员 = 完成换人
+    if (state.pendingSub) {
+      openSubForm(team, slotIdx);
+      return;
+    }
+    var t = state.teams[team];
+    var slot = t.slots[slotIdx];
+    var isOut = outIdx != null;
+    var s = isOut ? slot.outs[outIdx] : slot;
+    var p = findPlayer(team, isOut ? s.playerId : slot.playerId);
+    var html = '<h3>标注 · <span class="pname">' + p.name + '（' + p.jn + '号）</span>' +
+      (isOut ? ' <span style="color:#e53935;font-size:12px;font-weight:600">已换下 ↓' + s.at + "'</span>" : '') +
+      '</h3>';
+
+    function row(label, key) {
+      return '<div class="stat-row"><span class="label">' + label + '</span>' +
+        '<div class="ctl">' +
+          '<button data-op="dec" data-key="' + key + '">−</button>' +
+          '<span class="val">' + s[key] + '</span>' +
+          '<button data-op="inc" data-key="' + key + '">+</button>' +
+        '</div></div>';
+    }
+    html += row('进球', 'goals');
+    html += row('助攻', 'assists');
+    html += row('黄牌', 'yellow');
+    html += row('红牌', 'red');
+    html += '<button class="close-btn">完成</button>';
+
+    var mask = document.getElementById('mask');
+    var modal = document.getElementById('modal');
+    modal.innerHTML = html;
+    mask.classList.add('open');
+
+    modal.querySelectorAll('button[data-op]').forEach(function (btn) {
+      btn.onclick = function () {
+        var key = btn.getAttribute('data-key');
+        var op = btn.getAttribute('data-op');
+        if (op === 'inc') s[key]++;
+        else if (s[key] > 0) s[key]--;
+        if (key === 'red' && s.red > 0) s.yellow = 0;
+        renderPitch();              // 刷新球场角标
+        renderSquad(team);          // 刷新名单徽章
+        saveLocal();
+        openStatModal(team, slotIdx, outIdx);   // 重绘弹窗
+      };
+    });
+    modal.querySelector('.close-btn').onclick = closeModal;
+  }
+
+  function openSubForm(team, slotIdx) {
+    var t = state.teams[team];
+    var slot = t.slots[slotIdx];
+    var outPlayer = findPlayer(team, slot.playerId);
+    var inPlayer = findPlayer(state.pendingSub.team, state.pendingSub.playerId);
+
+    var html = '<h3>换人确认</h3>' +
+      '<div class="sub-form">' +
+      '<label>上场：' + inPlayer.name + '（' + inPlayer.jn + '号）</label>' +
+      '<label>下场：' + outPlayer.name + '（' + outPlayer.jn + '号）</label>' +
+      '<label>换人分钟</label>' +
+      '<input type="number" id="subMin" min="1" max="120" value="60">' +
+      '<div class="btns"><button class="cancel">取消</button><button class="confirm">确认换人</button></div>' +
+      '</div>';
+
+    var mask = document.getElementById('mask');
+    var modal = document.getElementById('modal');
+    modal.innerHTML = html;
+    mask.classList.add('open');
+
+    modal.querySelector('.cancel').onclick = function () {
+      state.pendingSub = null;
+      closeModal();
+      render();
+    };
+    modal.querySelector('.confirm').onclick = function () {
+      var min = parseInt(document.getElementById('subMin').value, 10) || 60;
+      pushHistory();
+      var outId = slot.playerId;
+      var outPlayer = outId ? findPlayer(team, outId) : null;
+      var outName = outPlayer ? outPlayer.name : '未知';
+      // 换下前先保存该球员的进球/助攻/红黄牌，避免被清零后丢失
+      var outStats = {
+        goals: slot.goals,
+        assists: slot.assists,
+        yellow: slot.yellow,
+        red: slot.red
+      };
+      // 替补进入场上该槽位
+      slot.playerId = inPlayer.id;
+      slot.goals = slot.assists = slot.yellow = slot.red = 0;
+      slot.subIn = min;
+      slot.subOut = null;
+      // 替补不离开替补席，只标注「↑分钟」和「换下谁」
+      t.subs.forEach(function (s) {
+        if (s.playerId === inPlayer.id) {
+          s.subAt = min;
+          s.replacedName = outName;
+        }
+      });
+      // 被换下的球员记录到该槽位，连同原有事件数据一起保留
+      if (outId) {
+        slot.outs = slot.outs || [];
+        slot.outs.push({
+          playerId: outId,
+          at: min,
+          byName: inPlayer.name,
+          goals: outStats.goals,
+          assists: outStats.assists,
+          yellow: outStats.yellow,
+          red: outStats.red
+        });
+      }
+      state.pendingSub = null;
+      closeModal();
+    };
+  }
+
+  function closeModal() {
+    document.getElementById('mask').classList.remove('open');
+    document.getElementById('modal').innerHTML = '';
+    render();
+  }
+
+  /* ---------- 导入 / 导出 ---------- */
+  function exportJSON() {
+    var data = JSON.parse(snapshotState());
+    ['home', 'away'].forEach(function (team) {
+      data[team].label = team === 'home' ? '主队' : '客队';
+      data[team].slots.forEach(function (s) {
+        var p = s.playerId ? findPlayer(team, s.playerId) : null;
+        s.number = p ? p.jn : null;
+        s.name = p ? p.name : null;
+      });
+    });
+    data.version = 1;
+    data.exportedAt = new Date().toISOString();
+
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'formation-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    hint('', '已导出 JSON 文件，可用「导入 JSON」恢复。');
+  }
+
+  function importJSON(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var d = JSON.parse(reader.result);
+        if (!d || !d.home || !d.away) throw new Error('缺少 home / away 数据');
+        pushHistory();
+        restoreState(JSON.stringify(d));
+        hint('', '已导入阵容数据。');
+      } catch (err) {
+        hint('warn', '导入失败：' + (err.message || '文件格式不正确'));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  document.addEventListener('click', handleClicks);
+
+  document.addEventListener('change', function (e) {
+    if (e.target.id === 'homeFormation' || e.target.id === 'awayFormation') {
+      var team = e.target.id === 'homeFormation' ? 'home' : 'away';
+      pushHistory();
+      var oldSlots = state.teams[team].slots;
+      var newSlots = buildSlots(e.target.value, teamSide(team)).map(function (s) {
+        return { line: s.line, idx: s.idx, x: s.x, y: s.y, playerId: null,
+                 goals: 0, assists: 0, yellow: 0, red: 0, subIn: null, subOut: null, outs: [] };
+      });
+      // 尽量保留已放好的球员（按原顺序回填）
+      var placed = oldSlots.filter(function (s) { return s.playerId; }).map(function (s) { return s.playerId; });
+      for (var i = 0; i < newSlots.length && i < placed.length; i++) {
+        newSlots[i].playerId = placed[i];
+      }
+      state.teams[team].formation = e.target.value;
+      state.teams[team].slots = newSlots;
+      // 重建替补席（未在首发名单中的球员）
+      var players = allPlayers(team);
+      var startIds = {};
+      newSlots.forEach(function (s) { if (s.playerId) startIds[s.playerId] = true; });
+      state.teams[team].subs = players.filter(function (p) { return !startIds[p.id]; })
+        .map(function (p) { return { playerId: p.id }; });
+      state.selectedPlayer = null;
+      render();
+    }
+  });
+
+  document.querySelectorAll('.mode-switch button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.mode = btn.getAttribute('data-mode');
+      state.selectedPlayer = null;
+      state.pendingSub = null;
+      document.querySelectorAll('.mode-switch button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      closeModal();
+      render();
+    });
+  });
+
+  document.getElementById('mask').addEventListener('click', function (e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    pushHistory();
+    initTeam('home');
+    initTeam('away');
+    state.selectedPlayer = null;
+    state.pendingSub = null;
+    render();
+  });
+
+  document.getElementById('autoFillBtn').addEventListener('click', function () {
+    pushHistory();
+    ['home', 'away'].forEach(function (team) {
+      var t = state.teams[team];
+      var players = allPlayers(team);
+      // 把所有球员先放回候选名单，清空槽位及其事件/换人记录
+      t.slots.forEach(function (s) {
+        s.playerId = null;
+        s.goals = s.assists = s.yellow = s.red = 0;
+        s.subIn = null; s.subOut = null; s.outs = [];
+      });
+      t.subs = players.map(function (p) { return { playerId: p.id }; });
+      // 按槽位顺序（门将→后卫→中场→前锋）依次从候选名单取人填入
+      var subIdx = 0;
+      t.slots.forEach(function (s) {
+        if (subIdx < t.subs.length) {
+          s.playerId = t.subs[subIdx].playerId;
+          subIdx++;
+        }
+      });
+      // 剩余的留在候选名单
+      t.subs = t.subs.slice(subIdx);
+    });
+    state.selectedPlayer = null;
+    state.pendingSub = null;
+    render();
+  });
+
+  /* ---------- 工具栏：撤销 / 重做 / 导入导出 ---------- */
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+  document.getElementById('exportBtn').addEventListener('click', exportJSON);
+  document.getElementById('importBtn').addEventListener('click', function () {
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (f) importJSON(f);
+    e.target.value = '';
+  });
+
+  /* ---------- 名单搜索：只重绘对应面板并保持焦点 ---------- */
+  document.addEventListener('input', function (e) {
+    var id = e.target.id;
+    if (id !== 'homeSearch' && id !== 'awaySearch') return;
+    var team = id === 'homeSearch' ? 'home' : 'away';
+    var caret = e.target.selectionStart;
+    state.search[team] = e.target.value;
+    renderSquad(team);
+    var input = document.getElementById(id);
+    if (input) {
+      input.focus();
+      if (caret != null) {
+        try { input.setSelectionRange(caret, caret); } catch (err) { /* 忽略 */ }
+      }
+    }
+  });
+
+  /* ---------- 快捷键 ---------- */
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    var k = String(e.key || '').toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+  });
+
+  /* ---------- 启动 ---------- */
+  initTeam('home');
+  initTeam('away');
+  if (!loadLocal()) render();
+})();
+</script>
+</body>
+</html>
