@@ -1,0 +1,199 @@
+.match-lineups {
+  --ml-accent: #176842;
+  --ml-surface: #f2f5f3;
+  --ml-ink: #172b23;
+  --ml-muted: #506459;
+  color: var(--ml-ink);
+}
+
+.match-lineups .ml-field {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 500px;
+  aspect-ratio: 1 / 1.28;
+  max-height: 660px;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  background: repeating-linear-gradient(#226c46 0 10%, #276f49 10% 20%);
+  color: white;
+}
+
+.match-lineups .ml-field-lines {
+  position: absolute;
+  inset: 3% 4%;
+  border: 1px solid #ffffff65;
+  pointer-events: none;
+}
+
+.match-lineups .ml-field-lines::before,
+.match-lineups .ml-field-lines::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+}
+
+.match-lineups .ml-field-lines::before { width: 100%; border-top: 1px solid #ffffff65; }
+.match-lineups .ml-field-lines::after {
+  left: 50%;
+  width: 17%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid #ffffff65;
+  border-radius: 50%;
+}
+
+.match-lineups .ml-penalty-area {
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  height: 14%;
+  border: 1px solid #ffffff65;
+}
+.match-lineups .ml-penalty-home { top: 0; border-top: 0; }
+.match-lineups .ml-penalty-away { bottom: 0; border-bottom: 0; }
+.match-lineups .ml-formations {
+  position: absolute;
+  inset: 50% 5% auto;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+.match-lineups .ml-field-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #133d2acc;
+  font-size: .72rem;
+}
+
+.match-lineups button { font: inherit; cursor: pointer; }
+.match-lineups button:focus-visible { outline: 2px solid #e0801b; outline-offset: 3px; }
+.match-lineups .ml-marker {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 60px;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: white;
+}
+
+.match-lineups .ml-shirt {
+  display: grid;
+  place-items: center;
+  min-width: 29px;
+  height: 29px;
+  padding-inline: 3px;
+  border: 1px solid #182d26;
+  border-radius: 50%;
+  background: #8ad6fb;
+  color: #163447;
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.match-lineups .ml-away .ml-shirt { background: #faf9ec; color: #192d25; }
+.match-lineups .ml-marker[aria-pressed="true"] .ml-shirt { outline: 3px solid #ffcf67; }
+.match-lineups .ml-marker-name {
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .68rem;
+  line-height: 1.1;
+  text-shadow: 0 1px 3px #152f22;
+}
+.match-lineups .ml-flags { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.match-lineups .ml-flags:empty { display: none; }
+.match-lineups .ml-marker .ml-flags { position: absolute; top: -4px; left: 64%; z-index: 1; flex-wrap: nowrap; }
+.match-lineups .ml-flag {
+  display: grid;
+  min-width: 14px;
+  height: 14px;
+  place-items: center;
+  padding-inline: 2px;
+  border: 1px solid white;
+  border-radius: 4px;
+  background: #fff;
+  color: #24372c;
+  font-size: .6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.match-lineups .ml-flag-in { background: #c9f6d4; color: #125c30; }
+.match-lineups .ml-flag-out, .match-lineups .ml-flag-red { background: #ffdfdc; color: #952828; }
+.match-lineups .ml-flag-yellow { background: #ffe374; color: #4c3800; }
+.match-lineups .ml-flag-assist { background: #dbeefe; color: #19466a; }
+
+.match-lineups .ml-section-title {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 6px 6px 0 0;
+  background: #e8eeeb;
+  color: #24382e;
+  font-size: .87rem;
+  font-weight: 750;
+}
+.match-lineups .ml-starting-title { background: #174d34; color: white; }
+.match-lineups .ml-squad-section + .ml-squad-section { margin-top: 12px; }
+
+.match-lineups .ml-detail {
+  display: grid;
+  gap: 5px;
+  min-height: 80px;
+  margin: 12px 0 20px;
+  padding: 11px 13px;
+  border: 1px solid #d6e5dc;
+  border-radius: 10px;
+  background: #f1f7f3;
+}
+
+.match-lineups .ml-announcement,
+.match-lineups .ml-muted { margin: 0; color: var(--ml-muted); font-size: .84rem; }
+.match-lineups .ml-announcement strong { color: var(--ml-ink); }
+.match-lineups .ml-player-context { display: block; margin-top: 2px; }
+.match-lineups .ml-unpublished { margin-bottom: 12px; }
+.match-lineups .ml-profile { justify-self: start; border: 0; border-radius: 6px; padding: 5px 8px; background: white; color: var(--ml-accent); }
+.match-lineups .ml-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #e8eeeb; }
+.match-lineups .ml-team { padding: 0 6px 6px; }
+.match-lineups .ml-team + .ml-team { border-left: 1px solid #e8eeeb; }
+.match-lineups .ml-team-name { display: flex; align-items: center; gap: 5px; min-height: 3.8em; margin: 0; padding: 5px 2px; border-bottom: 1px solid #e8eeeb; font-size: .8rem; line-height: 1.25; overflow-wrap: anywhere; }
+.match-lineups .ml-team-dot { flex: 0 0 9px; height: 9px; border: 1px solid #27434c; border-radius: 50%; background: #8ad6fb; }
+.match-lineups .ml-team-away .ml-team-dot { background: #faf9ec; }
+.match-lineups .ml-list { margin: 0; padding: 0; list-style: none; }
+.match-lineups .ml-player {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-bottom-color: #edf1ee;
+  border-radius: 4px;
+  padding: 4px 2px;
+  background: #fff;
+  color: var(--ml-ink);
+  font-size: .85rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.match-lineups .ml-number { display: grid; place-items: center; min-width: 24px; height: 24px; border: 1px solid #27434c; border-radius: 50%; padding: 0 2px; background: #d5eefb; color: #163447; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.match-lineups .ml-team-away .ml-number { background: #faf9ec; }
+.match-lineups .ml-player:hover,
+.match-lineups .ml-player[aria-pressed="true"] { border-color: #60a581; background: #e5f2e9; }
+
+@media (max-width: 420px) {
+  .match-lineups .ml-marker { width: min(50px, 15%); }
+}
