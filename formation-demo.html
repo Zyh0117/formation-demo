@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>阵型图演示（独立）</title>
+<title>赛事回顾 · 双方阵容演示</title>
+<link rel="stylesheet" href="./match-lineups.css">
 <style>
   :root {
     --pitch-green: #2e7d32;
@@ -517,19 +518,80 @@
   .sub-form .btns button { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 14px; }
   .sub-form .confirm { background: #2979ff; color: #fff; border: none; }
   .sub-form .cancel { background: #f5f6f8; border: 1px solid var(--border); color: var(--sub-text); }
+  .match-demo {
+    max-width: 760px;
+    margin: 0 auto 18px;
+    padding: clamp(12px, 3vw, 28px);
+    border: 1px solid #e0e7e2;
+    border-radius: 16px;
+    background: #fff;
+    color: #172b23;
+  }
+  .match-demo h1 { font-size: 1.35rem; }
+  .match-demo .demo-title-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+  .match-demo .demo-note { color: #526457; font-size: .82rem; margin: 4px 0 14px; }
+  .match-demo .demo-scoreboard {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+    align-items: center;
+    gap: clamp(6px,2vw,16px);
+    padding: 18px 8px;
+    border: 1px solid #20556a;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #173f57, #23738a);
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    font-size: .88rem;
+    overflow-wrap: anywhere;
+  }
+  .match-demo .demo-team { display: grid; justify-items: center; gap: 6px; line-height: 1.35; }
+  .match-demo .demo-team-badge { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #f0f8ff; border-radius: 50%; background: #afdff2; color: #163c4e; font-size: .77rem; }
+  .match-demo .demo-team-away .demo-team-badge { background: #faf9ec; }
+  .match-demo .demo-score { display: grid; font-size: 1.75rem; white-space: nowrap; }
+  .match-demo .demo-score small { font-size: .75rem; font-weight: 600; }
+  .match-demo .demo-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0; color: #526457; font-size: .84rem; }
+  .match-demo .demo-tabs { display: flex; gap: 14px; margin-bottom: 12px; border-bottom: 1px solid #dce5df; }
+  .match-demo .demo-tabs button { padding: 8px 4px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #526457; font: inherit; cursor: pointer; }
+  .match-demo .demo-tabs button[aria-selected="true"] { color: #176842; border-bottom-color: #176842; font-weight: 700; }
+  .match-demo .demo-events { display: grid; gap: 8px; list-style: none; }
+  .match-demo .demo-events li { border-radius: 8px; background: #f3f7f5; padding: 10px; font-size: .9rem; }
+  .match-demo [hidden] { display: none; }
+  .editor-demo { max-width: 1200px; margin: auto; }
+  .editor-demo > summary { cursor: pointer; margin-bottom: 12px; padding: 10px 12px; background: #fff; border: 1px solid var(--border); border-radius: 8px; font-weight: 700; }
 </style>
 </head>
 <body>
+<section class="match-demo" aria-labelledby="demoTitle">
+  <div class="demo-title-row">
+    <h1 id="demoTitle">赛事回顾</h1>
+    <button type="button" class="tool-btn" id="editLineups" aria-controls="lineupEditor">编辑双方阵容</button>
+  </div>
+  <p class="demo-note">演示数据 · 阵型位置和比赛事件为示例</p>
+  <div id="demoScore" class="demo-scoreboard" aria-label="比赛比分"></div>
+  <p id="demoMeta" class="demo-meta"></p>
+  <div class="demo-tabs" role="tablist" aria-label="比赛详情">
+    <button id="demoEventsTab" type="button" role="tab" aria-controls="demoEvents" aria-selected="false" tabindex="-1">关键事件</button>
+    <button id="demoLineupsTab" type="button" role="tab" aria-controls="demoLineups" aria-selected="true">双方阵容</button>
+  </div>
+  <div id="demoEvents" role="tabpanel" aria-labelledby="demoEventsTab" hidden></div>
+  <div id="demoLineups" role="tabpanel" aria-labelledby="demoLineupsTab"></div>
+</section>
+
+<details class="editor-demo" id="lineupEditor">
+<summary>编辑双方阵容</summary>
 <header>
-  <h1>阵型图演示 <small style="font-weight:400;color:#888;">（独立原型 · 未接入应用）</small></h1>
+  <h1>阵容编辑工具</h1>
+  <p class="hint">先在任一队名单中选择球员，再点击同队场上的位置。编辑会同步到上方「双方阵容」。</p>
+  <button type="button" class="tool-btn" id="previewLineups">查看双方阵容</button>
   <div class="mode-switch">
     <button data-mode="lineup" class="active">赛前排兵</button>
     <button data-mode="stats">赛后标注</button>
   </div>
   <div class="formation-bar">
-    <span class="team-label home-label">主队</span>
+    <label class="team-label home-label" for="homeFormation">主队阵型</label>
     <select id="homeFormation"></select>
-    <span class="team-label away-label">客队</span>
+    <label class="team-label away-label" for="awayFormation">客队阵型</label>
     <select id="awayFormation"></select>
     <button id="autoFillBtn" style="margin-left:auto;padding:6px 14px;border-radius:8px;border:1px solid #2979ff;background:#2979ff;color:#fff;cursor:pointer;font-size:13px;">一键排入</button>
     <button id="clearBtn" style="padding:6px 14px;border-radius:8px;border:1px solid #e53935;background:#fff;color:#e53935;cursor:pointer;font-size:13px;">清空阵容</button>
@@ -559,11 +621,14 @@
   </section>
   <aside class="squad-panel" id="awaySquad"></aside>
 </main>
+</details>
 
 <div class="modal-mask" id="mask">
   <div class="modal" id="modal"></div>
 </div>
 
+<script src="./match-lineups.js"></script>
+<script src="./match-preview.js"></script>
 <script>
 (function () {
   'use strict';
@@ -571,14 +636,16 @@
   /* ---------- 常量 ---------- */
   var FORMATIONS = ['4-4-2','4-3-3','3-5-2','4-2-3-1','3-4-3','5-4-1','4-5-1','4-1-4-1','3-4-1-2','5-3-2'];
 
-  /* ---------- 假名单数据 ---------- */
-  function roster(prefix, nums) {
-    return nums.map(function (n) {
-      return { id: prefix + '-' + n, jn: n, name: prefix + '球员' + n };
-    });
-  }
-  var HOME_PLAYERS = roster('主队', [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
-  var AWAY_PLAYERS = roster('客队', [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
+  var demo = window.MatchDemo;
+  var teams = ['home', 'away'];
+  var roster = {};
+  teams.forEach(function (team) {
+    roster[team] = demo.match.lineups.filter(function (entry) { return entry.teamType === team; })
+      .map(function (entry) {
+        return { id: entry.playerId, jn: entry.player.jerseyNumber, name: entry.player.name };
+      });
+  });
+  function teamName(team) { return demo.match[team + 'Team'].teamName; }
 
   /* ---------- 状态 ---------- */
   var state = {
@@ -587,15 +654,94 @@
     pendingSub: null,        // { team, playerId } 待换上的替补
     search: { home: '', away: '' },
     teams: {
-      home: { formation: '4-3-3', slots: [], subs: [] },
-      away: { formation: '4-4-2', slots: [], subs: [] }
+      home: { formation: demo.formations.home.shape, slots: [], subs: [] },
+      away: { formation: demo.formations.away.shape, slots: [], subs: [] }
     }
   };
 
   /* ---------- 持久化与历史 ---------- */
-  var STORAGE_KEY = 'sztufa-formation-demo-v1';
+  var STORAGE_KEY = 'sztufa-formation-demo-match-preview-v1';
   var MAX_HISTORY = 60;
   var historyStack = { undo: [], redo: [] };
+
+  function substitutionStatuses(team, slots) {
+    var statuses = new Map();
+    slots.forEach(function (slot) {
+      var history = (slot.outs || []).concat(slot);
+      for (var i = 0; i < history.length - 1; i++) {
+        var outgoing = history[i];
+        var incoming = history[i + 1];
+        var previous = statuses.get(outgoing.playerId);
+        if (previous) {
+          previous.outAt = outgoing.at;
+          previous.replacedByName = findPlayer(team, incoming.playerId).name;
+        }
+        statuses.set(incoming.playerId, {
+          subAt: outgoing.at,
+          replacedName: findPlayer(team, outgoing.playerId).name
+        });
+      }
+    });
+    return statuses;
+  }
+
+  function syncSubstitutionStatuses(team) {
+    var t = state.teams[team];
+    var statuses = substitutionStatuses(team, t.slots);
+    t.subs.forEach(function (sub) {
+      var status = statuses.get(sub.playerId) || {};
+      sub.subAt = status.subAt;
+      sub.outAt = status.outAt;
+      sub.replacedName = status.replacedName;
+      sub.replacedByName = status.replacedByName;
+    });
+  }
+
+  function validateSnapshot(d) {
+    if (!d || typeof d !== 'object') throw new Error('文件格式不正确');
+    teams.forEach(function (team) {
+      var src = d[team];
+      if (!src || !FORMATIONS.includes(src.formation) || !Array.isArray(src.slots) || src.slots.length !== 11 || !Array.isArray(src.subs)) {
+        throw new Error('缺少有效的主客队阵容或阵型');
+      }
+      var used = new Set();
+      var subs = new Set();
+      function checkPlayer(id, list) {
+        if (!findPlayer(team, id) || list.has(id)) throw new Error('存在重复球员或球员不属于本场比赛');
+        list.add(id);
+      }
+      function checkStats(record, timeFields) {
+        if (!record || typeof record !== 'object') throw new Error('球员记录格式不正确');
+        ['goals', 'assists', 'yellow', 'red'].forEach(function (key) {
+          if (record[key] != null && (!Number.isSafeInteger(record[key]) || record[key] < 0)) throw new Error('统计数据必须是非负整数');
+        });
+        timeFields.forEach(function (key) {
+          if (record[key] != null && (!Number.isInteger(record[key]) || record[key] < 1 || record[key] > 120)) throw new Error('换人分钟必须是 1–120 的整数');
+        });
+        ['byName', 'replacedName', 'replacedByName'].forEach(function (key) {
+          if (record[key] != null && (typeof record[key] !== 'string' || /[<>&]/.test(record[key]))) throw new Error('换人说明含无效字符');
+        });
+      }
+      src.slots.forEach(function (slot) {
+        checkStats(slot, ['subIn', 'subOut']);
+        if (slot.playerId != null) checkPlayer(slot.playerId, used);
+        if (slot.outs != null && !Array.isArray(slot.outs)) throw new Error('换下球员记录格式不正确');
+        (slot.outs || []).forEach(function (record) {
+          checkStats(record, ['at']);
+          if (!slot.playerId || record.at == null) throw new Error('换人记录不完整');
+          checkPlayer(record.playerId, used);
+        });
+      });
+      var statuses = substitutionStatuses(team, src.slots);
+      src.subs.forEach(function (sub) {
+        checkStats(sub, ['subAt', 'outAt']);
+        checkPlayer(sub.playerId, subs);
+        if (used.has(sub.playerId) && !statuses.has(sub.playerId)) {
+          throw new Error('首发球员不能同时出现在替补席');
+        }
+      });
+    });
+  }
 
   // 只序列化必要字段：坐标可由阵型重建，不存
   function snapshotState() {
@@ -624,6 +770,7 @@
 
   function restoreState(json) {
     var d = JSON.parse(json);
+    validateSnapshot(d);
     state.mode = d.mode === 'stats' ? 'stats' : 'lineup';
     ['home', 'away'].forEach(function (team) {
       var src = d[team] || {};
@@ -659,7 +806,8 @@
           subAt: s.subAt,
           replacedName: s.replacedName,
           outAt: s.outAt,
-          replacedByName: s.replacedByName
+          replacedByName: s.replacedByName,
+          goals: s.goals || 0, assists: s.assists || 0, yellow: s.yellow || 0, red: s.red || 0
         };
       });
     });
@@ -670,8 +818,16 @@
   }
 
   function saveLocal() {
-    try { localStorage.setItem(STORAGE_KEY, snapshotState()); } catch (e) { /* 隐私模式忽略 */ }
     var tip = document.getElementById('saveTip');
+    try {
+      localStorage.setItem(STORAGE_KEY, snapshotState());
+    } catch (e) {
+      if (tip) {
+        tip.textContent = '未保存到浏览器，可导出 JSON 保留改动';
+        tip.classList.remove('flash');
+      }
+      return;
+    }
     if (tip) {
       tip.textContent = '已保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
       tip.classList.add('flash');
@@ -771,7 +927,7 @@
 
   function initTeam(team) {
     var t = state.teams[team];
-    var players = team === 'home' ? HOME_PLAYERS : AWAY_PLAYERS;
+    var players = allPlayers(team);
     t.slots = buildSlots(t.formation, teamSide(team)).map(function (s) {
       return { line: s.line, idx: s.idx, x: s.x, y: s.y, playerId: null,
                goals: 0, assists: 0, yellow: 0, red: 0, subIn: null, subOut: null };
@@ -780,11 +936,92 @@
     t.subs = players.map(function (p) { return { playerId: p.id }; });
   }
 
-  function allPlayers(team) { return team === 'home' ? HOME_PLAYERS : AWAY_PLAYERS; }
+  function allPlayers(team) { return roster[team]; }
   function findPlayer(team, id) {
     var arr = allPlayers(team);
     for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i];
     return null;
+  }
+
+  function seedMatch() {
+    teams.forEach(function (team) {
+      initTeam(team);
+      var t = state.teams[team];
+      demo.formations[team].playerIds.forEach(function (id, i) { t.slots[i].playerId = id; });
+      var starting = new Set(demo.formations[team].playerIds);
+      t.subs = t.subs.filter(function (sub) { return !starting.has(sub.playerId); });
+    });
+    demo.match.events.forEach(function (event) {
+      var t = state.teams[event.teamType];
+      if (event.eventType === 'goal') {
+        t.slots.find(function (slot) { return slot.playerId === event.playerId; }).goals++;
+        if (event.assistPlayerId) t.slots.find(function (slot) { return slot.playerId === event.assistPlayerId; }).assists++;
+      } else if (event.eventType === 'yellow_card') {
+        t.slots.find(function (slot) { return slot.playerId === event.playerId; }).yellow++;
+      } else if (event.eventType === 'substitution') {
+        var slot = t.slots.find(function (slot) { return slot.playerId === event.subPlayerId; });
+        var minute = parseInt(event.eventTime, 10);
+        slot.outs = [{ playerId: slot.playerId, at: minute, byName: event.playerName,
+          goals: slot.goals, assists: slot.assists, yellow: slot.yellow, red: slot.red }];
+        slot.playerId = event.playerId;
+        slot.subIn = minute;
+        slot.goals = slot.assists = slot.yellow = slot.red = 0;
+      }
+    });
+  }
+
+  function publishMatch() {
+    var lineups = [];
+    var formations = {};
+    var events = [];
+    var fields = { goals: 'goal', assists: 'assist', yellow: 'yellow_card', red: 'red_card' };
+    function publishStats(team, record, player) {
+      Object.keys(fields).forEach(function (field) {
+        var count = record[field];
+        if (!Number.isSafeInteger(count) || count <= 0) return;
+        var type = fields[field];
+        var sample = demo.match.events.find(function (event) {
+          return event.teamType === team && (event.playerId === player.id && event.eventType === type ||
+            type === 'assist' && event.assistPlayerId === player.id);
+        });
+        events.push({ teamType: team, eventType: type, playerId: player.id, playerName: player.name,
+          eventTime: sample?.eventTime, count: count });
+      });
+    }
+    teams.forEach(function (team) {
+      var t = state.teams[team];
+      var startingIds = t.slots.map(function (slot) { return slot.outs?.[0]?.playerId || slot.playerId; });
+      formations[team] = { shape: t.formation, playerIds: startingIds };
+      function addPlayer(id, type) {
+        var p = id && findPlayer(team, id);
+        if (p) lineups.push({ playerId: id, teamType: team, lineupType: type,
+          player: { id: id, name: p.name, jerseyNumber: p.jn } });
+      }
+      startingIds.forEach(function (id) { addPlayer(id, 'starting'); });
+      t.subs.forEach(function (sub) {
+        if (!startingIds.includes(sub.playerId)) {
+          addPlayer(sub.playerId, 'substitute');
+          var player = findPlayer(team, sub.playerId);
+          if (player && !t.slots.some(function (slot) {
+            return slot.playerId === sub.playerId || slot.outs?.some(function (record) { return record.playerId === sub.playerId; });
+          })) publishStats(team, sub, player);
+        }
+      });
+      t.slots.forEach(function (slot) {
+        var history = (slot.outs || []).concat(slot);
+        history.forEach(function (record, i) {
+          var player = record.playerId && findPlayer(team, record.playerId);
+          if (!player) return;
+          publishStats(team, record, player);
+          var next = history[i + 1];
+          var incoming = next?.playerId && findPlayer(team, next.playerId);
+          if (incoming) events.push({ teamType: team, eventType: 'substitution', eventTime: record.at + '′',
+            playerId: incoming.id, playerName: incoming.name, subPlayerId: player.id, subPlayerName: player.name });
+        });
+      });
+    });
+    events.sort(function (a, b) { return (parseInt(a.eventTime, 10) || Infinity) - (parseInt(b.eventTime, 10) || Infinity); });
+    demo.update(lineups, formations, events);
   }
 
   /* ---------- 渲染：名单面板 ---------- */
@@ -795,6 +1032,15 @@
     return String(p.jn).indexOf(key) >= 0 || p.name.toLowerCase().indexOf(key) >= 0;
   }
 
+  function lineupPlayerId(slot) {
+    return slot.outs?.[0]?.playerId || slot.playerId;
+  }
+
+  function visibleSlot(slot) {
+    if (state.mode !== 'lineup' || !slot.outs?.length) return slot;
+    return Object.assign({}, slot, slot.outs[0], { subIn: null, subOut: null, outs: [] });
+  }
+
   function renderSquad(team) {
     var el = document.getElementById(team === 'home' ? 'homeSquad' : 'awaySquad');
     var t = state.teams[team];
@@ -802,10 +1048,10 @@
     var cls = team === 'home' ? 'home' : 'away';
     var q = state.search[team] || '';
     var onPitchIds = {};
-    t.slots.forEach(function (s) { if (s.playerId) onPitchIds[s.playerId] = true; });
+    t.slots.forEach(function (s) { var id = visibleSlot(s).playerId; if (id) onPitchIds[id] = true; });
 
     var html = '';
-    html += '<div class="panel-title ' + cls + '">' + (team === 'home' ? '主队' : '客队') + '</div>';
+    html += '<div class="panel-title ' + cls + '">' + teamName(team) + '（' + (team === 'home' ? '主' : '客') + '）</div>';
     html += '<input class="squad-search" type="text" id="' + team + 'Search" data-team="' + team + '" ' +
             'placeholder="搜索号码或姓名" value="' + q.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">';
     html += '<div class="sub-heading">首发 ' + t.slots.length + ' 人 · ' + t.formation + '</div>';
@@ -813,6 +1059,7 @@
     var shownOnPitch = 0;
     // 按槽位顺序渲染：当前在场球员 + 该位置被换下的球员（↓）
     t.slots.forEach(function (slot, slotIdx) {
+      slot = visibleSlot(slot);
       if (!slot.playerId) return;
       var p = findPlayer(team, slot.playerId);
       if (p && matchSearch(p, q)) {
@@ -932,6 +1179,7 @@
     ['home', 'away'].forEach(function (team) {
       var t = state.teams[team];
       t.slots.forEach(function (s, i) {
+        s = visibleSlot(s);
         var x = (s.x * 100).toFixed(2);
         var y = (s.y * 100).toFixed(2);
         var p = s.playerId ? findPlayer(team, s.playerId) : null;
@@ -994,12 +1242,14 @@
 
   function render() {
     initSeasons();
+    teams.forEach(syncSubstitutionStatuses);
     renderSquad('home');
     renderSquad('away');
     renderPitch();
     hint();
     updateHistoryButtons();
     saveLocal();
+    publishMatch();
   }
 
   function initSeasons() {
@@ -1032,14 +1282,15 @@
         onPickRow(team, playerId);
       }
     } else if (action === 'click-player' && state.mode === 'stats') {
-      // 打开标注弹窗前记录一次历史（弹窗内多次加减合并为一步撤销）
-      if (!state.pendingSub) pushHistory();
       openStatModal(team, slotIdx);
     } else if (action === 'sub-in') {
       onSubIn(team, playerId);
     } else if (action === 'stat-out') {
       var outIdx = parseInt(t.getAttribute('data-out'), 10);
-      if (!state.pendingSub) pushHistory();
+      if (state.pendingSub) {
+        hint('warn', '请选择仍在场上的球员换下。');
+        return;
+      }
       openStatModal(team, slotIdx, outIdx);
     }
   }
@@ -1056,18 +1307,28 @@
     }
     // 如果该球员已在场上，且当前没有从候选名单选中其他人 → 从场上移除回候选名单
     var t = state.teams[team];
-    var onPitch = t.slots.some(function (s) { return s.playerId === playerId; });
+    var onPitch = t.slots.find(function (s) { return lineupPlayerId(s) === playerId; });
     if (onPitch && !state.selectedPlayer) {
+      if (onPitch.outs?.length) {
+        hint('warn', '这个位置已有换人记录。可在赛后标注中点球员，撤回最近一次换人后再编辑。');
+        return;
+      }
       pushHistory();
-      t.slots.forEach(function (s) { if (s.playerId === playerId) s.playerId = null; });
-      var exists = t.subs.some(function (s) { return s.playerId === playerId; });
-      if (!exists) t.subs.push({ playerId: playerId });
+      moveToBench(t, onPitch);
       render();
       return;
     }
     // 正常选中
     state.selectedPlayer = { team: team, playerId: playerId };
     render();
+  }
+
+  function moveToBench(t, slot) {
+    if (slot.playerId && !t.subs.some(function (sub) { return sub.playerId === slot.playerId; })) {
+      t.subs.push({ playerId: slot.playerId, goals: slot.goals, assists: slot.assists, yellow: slot.yellow, red: slot.red });
+    }
+    slot.playerId = null;
+    slot.goals = slot.assists = slot.yellow = slot.red = 0;
   }
 
   function onPlace(team, slotIdx) {
@@ -1082,27 +1343,30 @@
     var t = state.teams[team];
     var slot = t.slots[slotIdx];
     if (!slot) return;
-    pushHistory();
-    // 如果目标槽位已有球员，先将其放回候选名单
-    if (slot.playerId && slot.playerId !== playerId) {
-      var exists = t.subs.some(function (s) { return s.playerId === slot.playerId; });
-      if (!exists) t.subs.push({ playerId: slot.playerId });
+    var from = t.slots.find(function (s) { return s.playerId === playerId; });
+    if (from === slot) return;
+    if (slot.outs?.length || from?.outs?.length ||
+        t.slots.some(function (s) { return s.outs?.some(function (out) { return out.playerId === playerId; }); })) {
+      hint('warn', '这个位置已有换人记录。可在赛后标注中点球员，撤回最近一次换人后再编辑。');
+      return;
     }
-    // 把该球员从原槽位移除（如果之前已放在场上）
-    t.slots.forEach(function (s) { if (s.playerId === playerId) s.playerId = null; });
-    // 从候选名单移除该球员
+    pushHistory();
+    var record = from || t.subs.find(function (sub) { return sub.playerId === playerId; });
+    var stats = record ? { goals: record.goals || 0, assists: record.assists || 0,
+      yellow: record.yellow || 0, red: record.red || 0 } : null;
+    moveToBench(t, slot);
+    if (from) moveToBench(t, from);
     t.subs = t.subs.filter(function (s) { return s.playerId !== playerId; });
-    // 放入新槽位
     slot.playerId = playerId;
+    if (stats) Object.assign(slot, stats);
     state.selectedPlayer = null;
     render();
   }
 
   function onSubIn(team, playerId) {
     if (state.mode !== 'stats') return;
-    // 已上场的替补不可重复换上
-    var alreadyOn = state.teams[team].slots.some(function (s) { return s.playerId === playerId; });
-    if (alreadyOn) return;
+    var candidate = state.teams[team].subs.find(function (sub) { return sub.playerId === playerId; });
+    if (!candidate || candidate.subAt != null || candidate.outAt != null) return;
     state.pendingSub = { team: team, playerId: playerId };
     render();
     hint();
@@ -1112,7 +1376,7 @@
   }
 
   /* ---------- 赛后统计弹层 ---------- */
-  function openStatModal(team, slotIdx, outIdx) {
+  function openStatModal(team, slotIdx, outIdx, historyRecorded) {
     // 若有待换上的替补，点击场上球员 = 完成换人
     if (state.pendingSub) {
       openSubForm(team, slotIdx);
@@ -1139,6 +1403,9 @@
     html += row('助攻', 'assists');
     html += row('黄牌', 'yellow');
     html += row('红牌', 'red');
+    if (!isOut && slot.outs?.length) {
+      html += '<button type="button" class="tool-btn revert-sub">撤回这个位置最近一次换人</button>';
+    }
     html += '<button class="close-btn">完成</button>';
 
     var mask = document.getElementById('mask');
@@ -1150,19 +1417,45 @@
       btn.onclick = function () {
         var key = btn.getAttribute('data-key');
         var op = btn.getAttribute('data-op');
+        if (op === 'dec' && !s[key]) return;
+        if (!historyRecorded) pushHistory();
         if (op === 'inc') s[key]++;
         else if (s[key] > 0) s[key]--;
         if (key === 'red' && s.red > 0) s.yellow = 0;
         renderPitch();              // 刷新球场角标
         renderSquad(team);          // 刷新名单徽章
         saveLocal();
-        openStatModal(team, slotIdx, outIdx);   // 重绘弹窗
+        publishMatch();
+        openStatModal(team, slotIdx, outIdx, true);
       };
     });
     modal.querySelector('.close-btn').onclick = closeModal;
+    var revert = modal.querySelector('.revert-sub');
+    if (revert) revert.onclick = function () {
+      pushHistory();
+      var outgoing = slot.outs.pop();
+      var sub = t.subs.find(function (entry) { return entry.playerId === slot.playerId; });
+      if (sub) {
+        sub.goals = slot.goals;
+        sub.assists = slot.assists;
+        sub.yellow = slot.yellow;
+        sub.red = slot.red;
+      }
+      slot.playerId = outgoing.playerId;
+      slot.goals = outgoing.goals;
+      slot.assists = outgoing.assists;
+      slot.yellow = outgoing.yellow;
+      slot.red = outgoing.red;
+      slot.subIn = slot.outs.at(-1)?.at ?? null;
+      closeModal();
+    };
   }
 
   function openSubForm(team, slotIdx) {
+    if (state.pendingSub.team !== team) {
+      hint('warn', '请选择同队的球员换下。');
+      return;
+    }
     var t = state.teams[team];
     var slot = t.slots[slotIdx];
     var outPlayer = findPlayer(team, slot.playerId);
@@ -1188,11 +1481,17 @@
       render();
     };
     modal.querySelector('.confirm').onclick = function () {
-      var min = parseInt(document.getElementById('subMin').value, 10) || 60;
+      var input = document.getElementById('subMin');
+      input.required = true;
+      if (!input.reportValidity()) return;
+      var min = input.valueAsNumber;
+      if (slot.subIn != null && min < slot.subIn) {
+        input.setCustomValidity('换下时间不能早于上场时间。');
+        input.reportValidity();
+        return;
+      }
       pushHistory();
       var outId = slot.playerId;
-      var outPlayer = outId ? findPlayer(team, outId) : null;
-      var outName = outPlayer ? outPlayer.name : '未知';
       // 换下前先保存该球员的进球/助攻/红黄牌，避免被清零后丢失
       var outStats = {
         goals: slot.goals,
@@ -1202,16 +1501,13 @@
       };
       // 替补进入场上该槽位
       slot.playerId = inPlayer.id;
-      slot.goals = slot.assists = slot.yellow = slot.red = 0;
+      var incoming = t.subs.find(function (sub) { return sub.playerId === inPlayer.id; });
+      slot.goals = incoming?.goals || 0;
+      slot.assists = incoming?.assists || 0;
+      slot.yellow = incoming?.yellow || 0;
+      slot.red = incoming?.red || 0;
       slot.subIn = min;
       slot.subOut = null;
-      // 替补不离开替补席，只标注「↑分钟」和「换下谁」
-      t.subs.forEach(function (s) {
-        if (s.playerId === inPlayer.id) {
-          s.subAt = min;
-          s.replacedName = outName;
-        }
-      });
       // 被换下的球员记录到该槽位，连同原有事件数据一起保留
       if (outId) {
         slot.outs = slot.outs || [];
@@ -1228,6 +1524,7 @@
       state.pendingSub = null;
       closeModal();
     };
+    modal.querySelector('#subMin').addEventListener('input', function () { this.setCustomValidity(''); });
   }
 
   function closeModal() {
@@ -1267,7 +1564,7 @@
     reader.onload = function () {
       try {
         var d = JSON.parse(reader.result);
-        if (!d || !d.home || !d.away) throw new Error('缺少 home / away 数据');
+        validateSnapshot(d);
         pushHistory();
         restoreState(JSON.stringify(d));
         hint('', '已导入阵容数据。');
@@ -1286,24 +1583,13 @@
       var team = e.target.id === 'homeFormation' ? 'home' : 'away';
       pushHistory();
       var oldSlots = state.teams[team].slots;
-      var newSlots = buildSlots(e.target.value, teamSide(team)).map(function (s) {
-        return { line: s.line, idx: s.idx, x: s.x, y: s.y, playerId: null,
-                 goals: 0, assists: 0, yellow: 0, red: 0, subIn: null, subOut: null, outs: [] };
+      var newSlots = buildSlots(e.target.value, teamSide(team)).map(function (s, i) {
+        return Object.assign({}, oldSlots[i], s);
       });
-      // 尽量保留已放好的球员（按原顺序回填）
-      var placed = oldSlots.filter(function (s) { return s.playerId; }).map(function (s) { return s.playerId; });
-      for (var i = 0; i < newSlots.length && i < placed.length; i++) {
-        newSlots[i].playerId = placed[i];
-      }
       state.teams[team].formation = e.target.value;
       state.teams[team].slots = newSlots;
-      // 重建替补席（未在首发名单中的球员）
-      var players = allPlayers(team);
-      var startIds = {};
-      newSlots.forEach(function (s) { if (s.playerId) startIds[s.playerId] = true; });
-      state.teams[team].subs = players.filter(function (p) { return !startIds[p.id]; })
-        .map(function (p) { return { playerId: p.id }; });
       state.selectedPlayer = null;
+      state.pendingSub = null;
       render();
     }
   });
@@ -1316,7 +1602,6 @@
       document.querySelectorAll('.mode-switch button').forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
       closeModal();
-      render();
     });
   });
 
@@ -1334,27 +1619,24 @@
   });
 
   document.getElementById('autoFillBtn').addEventListener('click', function () {
-    pushHistory();
-    ['home', 'away'].forEach(function (team) {
+    var toFill = teams.map(function (team) {
       var t = state.teams[team];
-      var players = allPlayers(team);
-      // 把所有球员先放回候选名单，清空槽位及其事件/换人记录
-      t.slots.forEach(function (s) {
-        s.playerId = null;
-        s.goals = s.assists = s.yellow = s.red = 0;
-        s.subIn = null; s.subOut = null; s.outs = [];
+      var available = t.subs.filter(function (sub) { return sub.subAt == null && sub.outAt == null; });
+      return t.slots.filter(function (slot) { return !slot.playerId; }).slice(0, available.length)
+        .map(function (slot, i) { return { team: t, slot: slot, sub: available[i] }; });
+    }).flat();
+    if (!toFill.length) {
+      hint('', '没有可自动补齐的空位。');
+      return;
+    }
+    pushHistory();
+    toFill.forEach(function (entry) {
+      var sub = entry.sub;
+      Object.assign(entry.slot, {
+        playerId: sub.playerId, goals: sub.goals || 0, assists: sub.assists || 0,
+        yellow: sub.yellow || 0, red: sub.red || 0
       });
-      t.subs = players.map(function (p) { return { playerId: p.id }; });
-      // 按槽位顺序（门将→后卫→中场→前锋）依次从候选名单取人填入
-      var subIdx = 0;
-      t.slots.forEach(function (s) {
-        if (subIdx < t.subs.length) {
-          s.playerId = t.subs[subIdx].playerId;
-          subIdx++;
-        }
-      });
-      // 剩余的留在候选名单
-      t.subs = t.subs.slice(subIdx);
+      entry.team.subs = entry.team.subs.filter(function (candidate) { return candidate !== sub; });
     });
     state.selectedPlayer = null;
     state.pendingSub = null;
@@ -1394,14 +1676,14 @@
   /* ---------- 快捷键 ---------- */
   document.addEventListener('keydown', function (e) {
     if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.target.closest('input, textarea, [contenteditable]') || document.getElementById('mask').classList.contains('open')) return;
     var k = String(e.key || '').toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
     else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
   });
 
   /* ---------- 启动 ---------- */
-  initTeam('home');
-  initTeam('away');
+  seedMatch();
   if (!loadLocal()) render();
 })();
 </script>
